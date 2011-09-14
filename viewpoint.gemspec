@@ -13,15 +13,15 @@ Gem::Specification.new do |s|
 
   s.required_ruby_version = '>= 1.8.7'
 
-  s.author = 'Dan Wanek'
-  s.email = 'dan.wanek@gmail.com'
+  s.author = 'Jacob Carlson'
+  s.email = 'the.real.jacobwcarlson@gmail.com'
   s.homepage = 'http://github.com/zenchild/Viewpoint'
   s.rubyforge_project = nil
 
-  s.files = Dir['Changelog.txt', 'README', 'COPYING.txt', 'TODO', 'lib/**/*']
+  s.files = Dir['Changelog.txt', 'README', 'TODO', 'lib/**/*']
   s.require_path = 'lib'
   s.rdoc_options = %w(-x test/ -x examples/)
-  s.extra_rdoc_files = %w(README COPYING.txt)
+  s.extra_rdoc_files = %w(README)
 
   s.add_runtime_dependency  'handsoap'
   s.add_runtime_dependency  'nokogiri'
