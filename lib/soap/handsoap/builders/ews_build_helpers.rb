@@ -1,5 +1,6 @@
 =begin
-  This file is part of Viewpoint; the Ruby library for Microsoft Exchange Web Services.
+  This file is part of Viewpoint; the Ruby library for Microsoft Exchange Web
+  Services.
 
   Copyright © 2011 Dan Wanek <dan.wanek@gmail.com>
 
@@ -26,12 +27,10 @@ module Viewpoint
   module EWS
     module SOAP
       module EwsBuildHelpers
-
-        def folder_ids!(node, folder_ids, act_as=nil, element_name="#{NS_EWS_MESSAGES}:FolderIds")
+        def folder_ids!(node, folder_ids, act_as=nil,
+                        element_name="#{NS_EWS_MESSAGES}:FolderIds")
           node.add(element_name) do |p|
-            folder_ids.each do |id|
-              folder_id!(p,id,act_as)
-            end
+            folder_ids.each { |id| folder_id!(p, id, act_as) }
           end
         end
 

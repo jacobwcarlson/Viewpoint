@@ -1,5 +1,6 @@
 =begin
-  This file is part of Viewpoint; the Ruby library for Microsoft Exchange Web Services.
+  This file is part of Viewpoint; the Ruby library for Microsoft Exchange
+  Web Services.
 
   Copyright © 2011 Dan Wanek <dan.wanek@gmail.com>
 
@@ -24,9 +25,12 @@ module Viewpoint
 
       # CONSTANTS
 
-      NS_SOAP         = 'soap' # http://schemas.xmlsoap.org/soap/envelope/
-      NS_EWS_TYPES    = 't'    # http://schemas.microsoft.com/exchange/services/2006/types
-      NS_EWS_MESSAGES = 'm'    # http://schemas.microsoft.com/exchange/services/2006/messages
+      # http://schemas.xmlsoap.org/soap/envelope/
+      NS_SOAP         = 'soap'
+      # http://schemas.microsoft.com/exchange/services/2006/types
+      NS_EWS_TYPES    = 't'
+      # http://schemas.microsoft.com/exchange/services/2006/messages
+      NS_EWS_MESSAGES = 'm'
 
       # used in ResolveNames to determine where names are resolved
       ActiveDirectory = 'ActiveDirectory'
@@ -37,9 +41,9 @@ module Viewpoint
 
 
       # A Generic Class for SOAP returns.
-      # @attr_reader [String] :message The text from the EWS element <m:ResponseCode>
+      # @attr_reader [String] :message The text from the EWS element
+      #     <m:ResponseCode>
       class EwsSoapResponse
-
         attr_reader :status, :code, :message, :soap_response
         attr_accessor :items
 
@@ -53,10 +57,7 @@ module Viewpoint
         def set_soap_resp(response)
           @soap_response = response
         end
-
       end # EwsSoapResponse
-
-
     end # SOAP
   end # EWS
 end # Viewpoint

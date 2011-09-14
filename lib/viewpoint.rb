@@ -17,10 +17,10 @@
 =end
 
 # We only what one instance of this class so include Singleton
-require 'singleton'
 require 'date'
 require 'base64'
-require 'kconv' if(RUBY_VERSION.start_with? '1.9') # bug in rubyntlm with ruby 1.9.x
+# bug in rubyntlm with ruby 1.9.x
+require 'kconv' if(RUBY_VERSION.start_with? '1.9')
 
 
 # Class Extensions
@@ -37,6 +37,7 @@ require 'model/attendee'
 require 'model/generic_folder'
 require 'model/item_field_uri_map' # supports Item
 require 'model/item'
+
 # Specific Models
 # Folders
 require 'model/folder'
@@ -57,6 +58,7 @@ require 'model/task'
 require 'model/attachment'
 require 'model/file_attachment'
 require 'model/item_attachment'
+
 # Third Party Libraries
 require 'mail' # used to convert Message items to RFC822 compliant messages
 require 'icalendar' # used to convert Calendar items to iCalendar objects
@@ -64,22 +66,28 @@ require 'icalendar' # used to convert Calendar items to iCalendar objects
 # Load the Exception classes
 require 'exceptions/exceptions'
 
-
-# This is the Singlenton class that controls access and presentation to Exchange
-# Web Services.  It is possible to just use the SOAP classes themselves but this
-# is what ties all the pieces together.
-# @attr_reader [SOAP::ExchangeWebService] :ews The SOAP object used to make calls
-#   to the Exchange Web Service.
+# This is the class that controls access and presentation to
+# Exchange Web Services.  It is possible to just use the SOAP classes
+# themselves but this is what ties all the pieces together.
+#
+# @attr_reader [SOAP::ExchangeWebService] :ews The SOAP object used to make
+#   calls to the Exchange Web Service.
 module Viewpoint
   module EWS
-    # @attr_reader [Viewpoint::EWS::SOAP::ExchangeWebService] :ews The EWS object used
-    #   to make SOAP calls.  You typically don't need to use this, but if you want to
-    #   play around with the SOAP back-end it's available.
+    # @attr_reader [Viewpoint::EWS::SOAP::ExchangeWebService] :ews The EWS
+    #   object used to make SOAP calls. You typically don't need to use this,
+    #   but if you want to play around with the SOAP back-end it's available.
     class EWS
-      include Singleton
       include Viewpoint
 
-      attr_reader :ews
+      attr_reader :endpoint
+      attr_reader :ews, :user, :password
+
+      def initialize(opts = {})
+        @ews = SOAP::ExchangeWebService.new
+        set_auth(opts[:user], opts[:password])
+        self.endpoint = opts[:endpoint]
+      end
 
       # Set the endpoint for Exchange Web Services.  
       # @param [String] endpoint The URL of the endpoint. This should end in
@@ -87,47 +95,43 @@ module Viewpoint
       #   https://myexch/ews/exchange.asmx
       # @param [Integer] version The SOAP version to use.  This defaults to 1
       #   and you should not need to pass this parameter.
-      def self.endpoint=(endpoint, version = 1)
-        @@endpoint = endpoint
-        SOAP::ExchangeWebService.endpoint(:uri => endpoint, :version => version) && true
-      end
+      def endpoint=(endpoint, version = 1)
+        @endpoint = endpoint
+        return unless @endpoint
 
-      # Fetch the current endpoint
-      def self.endpoint
-        @@endpoint
+        SOAP::ExchangeWebService.endpoint(:uri => endpoint,
+                                          :version => version)
       end
 
       # Set the SOAP username and password.
       # @param [String] user The user name
       # @param [String] pass The password
-      def self.set_auth(user,pass)
-        @@user = user
-        SOAP::ExchangeWebService.set_auth(user,pass) && true
+      def set_auth(user,pass)
+        @user = user
+        SOAP::ExchangeWebService.set_auth(user, pass)
       end
 
       # Set the http driver that the SOAP back-end will use.
       # @param [Symbol] driver The HTTP driver.  Available drivers:
       #   :curb, :net_http, :http_client(Default)
-      def self.set_http_driver(driver)
+      def set_http_driver(driver)
         Handsoap.http_driver = driver
       end
 
       # Sets the CA path to a certificate or hashed certificate directory.
       # This is the same as HTTPClient::SSLConfig.set_trust_ca
-      # @param [String] ca_path A path to an OpenSSL::X509::Certificate or a 'c-rehash'ed directory
-      def self.set_trust_ca(ca_path)
-        SOAP::ExchangeWebService.set_http_options(:trust_ca_file => ca_path) && true
-      end
-
-      def initialize
-        @ews = SOAP::ExchangeWebService.new
+      # @param [String] ca_path A path to an OpenSSL::X509::Certificate or a
+      #     'c-rehash'ed directory
+      def set_trust_ca(ca_path)
+        SOAP::ExchangeWebService.set_http_options(:trust_ca_file => ca_path)
       end
 
       # The MailboxUser object that represents the user connected to EWS.
-      def me
-        MailboxUser.find_user((@@user.include?('@') ? @@user : "#{@@user}@"))
-      end
-
+      #
+      # jwc 09.12.2011: Commenting this out for the moment....
+      #def me
+        #MailboxUser.find_user((@user.include?('@') ? @user : "#{@user}@"))
+      #end
     end # class EWS
   end # EWS
 end

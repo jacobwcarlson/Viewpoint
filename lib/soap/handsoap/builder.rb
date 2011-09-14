@@ -1,5 +1,6 @@
 =begin
-  This file is part of Viewpoint; the Ruby library for Microsoft Exchange Web Services.
+  This file is part of Viewpoint; the Ruby library for Microsoft Exchange Web
+  Services.
 
   Copyright © 2011 Dan Wanek <dan.wanek@gmail.com>
 

@@ -26,53 +26,123 @@ module Viewpoint
     # in the Exchange Data Store of which there are many.
     # @see http://msdn.microsoft.com/en-us/library/aa564009.aspx
     class GenericFolder
+      attr_accessor :ews
+
       include Viewpoint
       include Model
 
-      @@distinguished_folder_ids = %w{calendar contacts deleteditems drafts inbox journal
-      notes outbox sentitems tasks msgfolderroot root junkemail searchfolders voicemail
-      recoverableitemsroot recoverableitemsdeletions recoverableitemsversions
-      recoverableitemspurges archiveroot archivemsgfolderroot archivedeleteditems
-      archiverecoverableitemsroot archiverecoverableitemsdeletions
-      archiverecoverableitemsversions archiverecoverableitemspurges publicfoldersroot}
+      @@distinguished_folder_ids = %w{
+        calendar contacts deleteditems drafts
+        inbox journal notes outbox sentitems tasks msgfolderroot root
+        junkemail searchfolders voicemail recoverableitemsroot
+        recoverableitemsdeletions recoverableitemsversions
+        recoverableitemspurges archiveroot archivemsgfolderroot
+        archivedeleteditems archiverecoverableitemsroot
+        archiverecoverableitemsdeletions archiverecoverableitemsversions
+        archiverecoverableitemspurges publicfoldersroot
+      }
 
-      @@event_types = %w{CopiedEvent CreatedEvent DeletedEvent ModifiedEvent MovedEvent NewMailEvent}
+      @@event_types = %w{
+        CopiedEvent CreatedEvent DeletedEvent ModifiedEvent MovedEvent
+        NewMailEvent
+      }
+
+      def initialize(ews_item)
+        super() # Calls initialize in Model (creates @ews_methods Array)
+
+        @ews_item = ews_item
+        @folder_id = ews_item[:folder_id][:id]
+        @ews_methods << :folder_id
+        @ews_methods << :id
+        @change_key = ews_item[:folder_id][:change_key]
+        @ews_methods << :change_key
+        unless ews_item[:parent_folder_id].nil?
+          @parent_id = ews_item[:parent_folder_id]
+          @ews_methods << :parent_id
+        end
+        define_str_var :display_name, :folder_class
+        define_int_var :child_folder_count, :total_count
+        # @todo Handle:
+        #   <EffectiveRights/>, <ExtendedProperty/>,
+        #   <ManagedFolderInformation/>, <PermissionSet/>
+        
+        # Base-64 encoded sync data
+        @sync_state = nil
+
+        # Whether or not the synchronization process is complete
+        @synced = false 
+        @subscription_id = nil
+        @watermark = nil
+        @shallow = true
+      end
 
       # Get a specific folder by its ID.
-      # @param [String,Symbol] folder_id either a DistinguishedFolderID or simply a FolderID
-      # @param [String,nil] act_as User to act on behalf as.  This user must have been given
-      #   delegate access to this folder or else this operation will fail.
+      #
+      # @param [String,Symbol] folder_id either a DistinguishedFolderID or
+      #     simply a FolderID
+      # @param [String,nil] act_as User to act on behalf as. This user must
+      #     have been given delegate access to this folder or else this
+      #     operation will fail.
       # @param [Hash] folder_shape
       # @option folder_shape [String] :base_shape IdOnly/Default/AllProperties
       # @raise [EwsError] raised when the backend SOAP method returns an error.
-      def self.get_folder(folder_id, act_as = nil, folder_shape = {:base_shape => 'Default'})
-        resp = (Viewpoint::EWS::EWS.instance).ews.get_folder( [normalize_id(folder_id)], folder_shape, act_as )
-        if(resp.status == 'Success')
-          folder = resp.items.first
-          f_type = folder.keys.first.to_s.camel_case
-          return(eval "#{f_type}.new(folder[folder.keys.first])")
-        else
-          raise EwsError, "Could not retrieve folder. #{resp.code}: #{resp.message}"
+      def get_folder(folder_id, act_as = nil,
+                     folder_shape = {:base_shape => 'Default'})
+        connect! unless @server
+        resp = @server.get_folder([normalize_id(folder_id)], folder_shape,
+                                  act_as )
+        if resp.status != 'Success'
+          raise EwsError,
+            "Could not retrieve folder. #{resp.code}: #{resp.message}"
         end
+
+        folder = resp.items.first
+        f_type = folder.keys.first.to_s.camel_case
+
+        # XXX: Gotta be a better way than this, revist
+        return(eval "#{f_type}.new(folder[folder.keys.first])")
       end
 
-      # Find subfolders of the passed root folder.  If no parameters are passed
-      # this method will search from the Root folder.
-      # @param [String,Symbol] root An folder id, either a DistinguishedFolderId (must me a Symbol)
-      #   or a FolderId (String). This is where to start the search from. Usually :root,:msgfolderroot,:publicfoldersroot
+      # Find subfolders of the passed root folder.  If no parameters are
+      # passed this method will search from the Root folder.
+      # @param [String,Symbol] root An folder id, either a
+      #     DistinguishedFolderId (must me a Symbol) or a FolderId (String).
+      #     This is where to start the search from.
+      #     Usually :root,:msgfolderroot,:publicfoldersroot
       # @param [String] traversal Shallow/Deep/SoftDeleted
       # @param [String] shape the shape to return IdOnly/Default/AllProperties
-      # @param [optional, String] folder_type an optional folder type to limit the search to like 'IPF.Task'
+      # @param [optional, String] folder_type an optional folder type to
+      #     limit the search to like 'IPF.Task'
       # @return [Array] Returns an Array of Folder or subclasses of Folder
       # @raise [EwsError] raised when the backend SOAP method returns an error.
-      def self.find_folders(root = :msgfolderroot, traversal = 'Shallow', shape = 'Default', folder_type = nil)
-        if( folder_type.nil? )
-          resp = (Viewpoint::EWS::EWS.instance).ews.find_folder( [normalize_id(root)], traversal, {:base_shape => shape} )
+      def self.find_folders(root = :msgfolderroot, traversal = 'Shallow',
+                            shape = 'Default', folder_type = nil)
+        connect! unless @server
+
+        if folder_type.nil?
+          resp = @server.find_folder([normalize_id(root)], traversal,
+                                     {:base_shape => shape} )
         else
-          restr = {:restriction => 
-            {:is_equal_to => [{:field_uRI => {:field_uRI=>'folder:FolderClass'}}, {:field_uRI_or_constant=>{:constant => {:value => folder_type}}}]}
+          restr = {
+            :restriction => {
+              :is_equal_to => [
+                {
+                  :field_uRI => {
+                    :field_uRI=>'folder:FolderClass'
+                  }
+                },
+                {
+                  :field_uRI_or_constant => {
+                    :constant => {
+                      :value => folder_type
+                    }
+                  }
+                }
+              ]
+            }
           }
-          resp = (Viewpoint::EWS::EWS.instance).ews.find_folder( [normalize_id(root)], traversal, {:base_shape => shape}, restr)
+          resp = @server.find_folder([normalize_id(root)], traversal,
+                                     {:base_shape => shape}, restr)
         end
 
         if(resp.status == 'Success')
@@ -157,30 +227,7 @@ module Viewpoint
       attr_reader :subscription_id, :watermark
       alias :id :folder_id
 
-      def initialize(ews_item)
-        super() # Calls initialize in Model (creates @ews_methods Array)
-        @ews_item = ews_item
-        @folder_id = ews_item[:folder_id][:id]
-        @ews_methods << :folder_id
-        @ews_methods << :id
-        @change_key = ews_item[:folder_id][:change_key]
-        @ews_methods << :change_key
-        unless ews_item[:parent_folder_id].nil?
-          @parent_id = ews_item[:parent_folder_id]
-          @ews_methods << :parent_id
-        end
-        define_str_var :display_name, :folder_class
-        define_int_var :child_folder_count, :total_count
-        # @todo Handle:
-        #   <EffectiveRights/>, <ExtendedProperty/>, <ManagedFolderInformation/>, <PermissionSet/>
-
-        @sync_state = nil # Base-64 encoded sync data
-        @synced = false   # Whether or not the synchronization process is complete
-        @subscription_id = nil
-        @watermark = nil
-        @shallow = true
-      end
-
+      
       # Subscribe this folder to events.  This method initiates an Exchange pull
       # type subscription.
       #
@@ -247,23 +294,53 @@ module Viewpoint
 
       # Find Items
       def find_items(opts = {})
-        opts = opts.clone # clone the passed in object so we don't modify it in case it's being used in a loop
-        item_shape = opts.has_key?(:item_shape) ? opts.delete(:item_shape) : {:base_shape => 'Default'}
-        unless item_shape.has_key?(:additional_properties) # Don't overwrite if specified by caller
-          item_shape[:additional_properties] = {:field_uRI => ['item:ParentFolderId']}
-        end
-        resp = (Viewpoint::EWS::EWS.instance).ews.find_item([@folder_id], 'Shallow', item_shape, opts)
-        if(resp.status == 'Success')
-          parms = resp.items.shift
-          items = []
-          resp.items.each do |i|
-            i_type = i.keys.first
-            items << (eval "#{i_type.to_s.camel_case}.new(i[i_type])")
-          end
-          return items
-        else
+        item_shape = opts[:item_shap] || {:base_shape => 'Default'}
+        item_shape[:additional_properties] ||= {
+          :field_uRL => ['item:ParentFolderId']
+        }
+
+        resp = @ews.find_item([@folder_id], 'Shallow', item_shape, opts)
+        if resp.status != 'Success'
           raise EwsError, "Could not find items. #{resp.code}: #{resp.message}"
         end
+
+        items = []
+        resp.items.drop(1).each do |item|
+          item_type = item.keys.first
+          items.push build_item(item)
+        end
+
+        return items
+      end
+
+      # XXX: jwc 099.13.2011
+      #      There should be an Item Factory...
+      def build_item(item)
+        item_type = item.keys.first
+        case item_type
+        when :contact
+          return Contact.new(item[item_type])
+        when :distribution__list
+          return DistributionList.new(item[item_type])
+        when :event
+          return Event.new(item[item_type])
+        when :meeting_cancellation
+          return MeetingCancellation.new(item[item_type])
+        when :meeting_message
+          return MeetingMessage.new(item[item_type])
+        when :meeting_request
+          return MeetingRequest.new(item[item_type])
+        when :meeting_response
+          return MeetingResponse.new(item[item_type])
+        when :message
+          return Message.new(item[item_type])
+        when :task
+          return Task.new(item[item_type])
+        else
+          puts "Unknown item type '#{item_type.to_s}'"
+        end
+
+        nil
       end
 
       # Fetch only items from today (since midnight)
@@ -332,18 +409,20 @@ module Viewpoint
 
       # Get Item
       # @param [String] item_id the ID of the item to fetch
-      # @param [String] change_key specify an optional change_key if you want to
-      #   make sure you are fetching a specific version of the object.
+      # @param [String] change_key specify an optional change_key if you want
+      #     to make sure you are fetching a specific version of the object.
       def get_item(item_id, change_key = nil)
-        item_shape = {:base_shape => 'Default', :additional_properties => {:field_uRI => ['item:ParentFolderId']}}
-        resp = (Viewpoint::EWS::EWS.instance).ews.get_item([item_id], item_shape)
-        if(resp.status == 'Success')
-          item = resp.items.shift
-          type = item.keys.first
-          eval "#{type.to_s.camel_case}.new(item[type])"
-        else
-          raise EwsError, "Could not retrieve item. #{resp.code}: #{resp.message}"
+        item_shape = {
+          :base_shape => 'Default',
+          :additional_properties => {:field_uRI => ['item:ParentFolderId']}
+        }
+        resp = @ews.get_item([item_id], item_shape)
+        if resp.status != 'Success'
+          raise EwsError,
+            "Could not retrieve item. #{resp.code}: #{resp.message}"
         end
+
+        build_item resp.items.first
       end
 
       # Get Items

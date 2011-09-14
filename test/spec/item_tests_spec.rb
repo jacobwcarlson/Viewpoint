@@ -1,3 +1,6 @@
+# jwc 09.13.2011
+#   These tests haven't been run, since as of now we're assuming this
+#   library will be read-only.
 $: << File.dirname(__FILE__) + '/../../lib/'
 require 'kconv'
 require 'viewpoint'
