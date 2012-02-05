@@ -1,5 +1,6 @@
 =begin
-  This file is part of Viewpoint; the Ruby library for Microsoft Exchange Web Services.
+  This file is part of Viewpoint; the Ruby library for Microsoft Exchange Web
+  Services.
 
   Copyright © 2011 Dan Wanek <dan.wanek@gmail.com>
 
@@ -22,9 +23,9 @@ module Viewpoint
     module SOAP
 
       # This class includes all the build helpers and also contains some root
-      # level methods to help code reuse.  The CreateItem operation is an example
-      # of this because the different item types share a lot but have a few subtle
-      # differences.
+      # level methods to help code reuse. The CreateItem operation is an
+      # example of this because the different item types share a lot but have
+      # a few subtle differences.
       class EwsBuilder
         include EwsBuildHelpers
 
@@ -43,7 +44,8 @@ module Viewpoint
         end
 
         # @see ExchangeWebService#subscribe
-        def push_subscription_request!(folder_ids, event_types, url, watermark=nil, status_frequency=5)
+        def push_subscription_request!(folder_ids, event_types, url,
+                                       watermark=nil, status_frequency=5)
           @node.add("#{NS_EWS_MESSAGES}:PushSubscriptionRequest") do |ps|
             folder_ids!(ps, folder_ids, nil, "#{NS_EWS_TYPES}:FolderIds")
             event_types!(ps, event_types)

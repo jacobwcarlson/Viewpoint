@@ -29,28 +29,28 @@ module Viewpoint
       class ExchangeWebService < Handsoap::Service
         include Viewpoint::EWS::SOAP
 
+        attr_accessor :version
+
         MS_BASE = "http://schemas.microsoft.com/exchange/services/2006"
         SOAP_ACTION_PREFIX = "#{MS_BASE}/messages"
 
         @raw_soap = false
         @http_options = nil
 
-        def initialize()
-          if $DEBUG
-            @debug = File.new('ews_debug.out', 'w')
-            @debug.sync = true
-          end
+        def initialize(args = {})
+          @version = args[:user] || 1
+          set_auth(args[:user], args[:password]) if args[:user]
         end
 
-        def endpoint=(uri)
-          @version ||= 1
-          @uri = uri
-          SOAP::ExchangeWebService.endpoint({:uri => uri, :version => @version})
-        end
-
-        def set_auth(user,pass)
+        def set_auth(user, pass, endpoint = nil)
           @user = user
           @pass = pass
+          @uri = endpoint
+          if @uri.nil? and not @user.nil?
+            @uri = Autodiscover.find_endpoint(@user, @pass)
+          end
+
+          ExchangeWebService.endpoint(:uri => @uri, :version => @version)
         end
 
         # Turn off parsing and just return the soap response
@@ -68,7 +68,6 @@ module Viewpoint
         end
 
         # ********* Begin Handsoap Hooks *********
-        #
         def on_create_document(doc)
           doc.alias NS_EWS_TYPES, "#{MS_BASE}/types"
           doc.alias NS_EWS_MESSAGES, "#{MS_BASE}/messages"
@@ -78,8 +77,8 @@ module Viewpoint
           end
         end
 
-        # Adds knowledge of namespaces to the response object.  These have to
-        # be identical to the URIs returned in the XML response.  For example,
+        # Adds knowledge of namespaces to the response object. These have to
+        # be identical to the URIs returned in the XML response. For example,
         # I had some issues with the 'soap' namespace because my original URI
         # did not end in a '/'
         #
@@ -105,9 +104,6 @@ module Viewpoint
             raise EwsLoginError, "Failed to login to EWS at #{uri}."
           end
         end
-        #
-        # ********** End Handsoap Hooks **********
-
 
         # Resolve ambiguous e-mail addresses and display names
         # @see http://msdn.microsoft.com/en-us/library/aa565329.aspx
@@ -293,8 +289,6 @@ module Viewpoint
           folders
         end
 
-
-        
         # Gets a folder by name.  This name must match the folder name exactly.
         #
         # @param [String] name The name of the folder to fetch.
@@ -1184,7 +1178,6 @@ module Viewpoint
         # each request
         def invoke(msg, action)
           raise EwsError, "EWS Endpoint not set." unless @uri
-
           super(msg, {:soap_action => action, :http_options => @http_options})
           #rescue SocketError
           #  raise EwsError, "Could not connect to endpoint: #{@uri}"

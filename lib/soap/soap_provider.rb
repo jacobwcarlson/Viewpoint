@@ -22,9 +22,6 @@
 module Viewpoint
   module EWS
     module SOAP
-
-      # CONSTANTS
-
       # http://schemas.xmlsoap.org/soap/envelope/
       NS_SOAP         = 'soap'
       # http://schemas.microsoft.com/exchange/services/2006/types
@@ -37,8 +34,6 @@ module Viewpoint
       ActiveDirectoryContacts = 'ActiveDirectoryContacts'
       Contacts = 'Contacts'
       ContactsActiveDirectory = 'ContactsActiveDirectory'
-
-
 
       # A Generic Class for SOAP returns.
       # @attr_reader [String] :message The text from the EWS element

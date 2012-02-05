@@ -59,12 +59,12 @@ require 'model/attachment'
 require 'model/file_attachment'
 require 'model/item_attachment'
 
-# Third Party Libraries
 require 'mail' # used to convert Message items to RFC822 compliant messages
 require 'icalendar' # used to convert Calendar items to iCalendar objects
 
-# Load the Exception classes
 require 'exceptions/exceptions'
+
+require 'helpers/autodiscover.rb'
 
 # This is the class that controls access and presentation to
 # Exchange Web Services.  It is possible to just use the SOAP classes
@@ -74,6 +74,21 @@ require 'exceptions/exceptions'
 #   calls to the Exchange Web Service.
 module Viewpoint
   module EWS
+    class EwsBase
+      def initialize(args = {})
+        @ews = SOAP::ExchangeWebService.new
+        @ews.set_auth(args[:user], args[:password])
+        @ews.version = args[:version]
+        @ews.endpoint = args[:endpoint] unless args[:endpoint].nil?
+      end
+    end
+
+    class EmailAccount < EwsBase
+      def mailboxes
+        @ews.all_folders
+      end
+    end
+
     # @attr_reader [Viewpoint::EWS::SOAP::ExchangeWebService] :ews The EWS
     #   object used to make SOAP calls. You typically don't need to use this,
     #   but if you want to play around with the SOAP back-end it's available.
@@ -86,7 +101,7 @@ module Viewpoint
       def initialize(opts = {})
         @ews = SOAP::ExchangeWebService.new
         set_auth(opts[:user], opts[:password])
-        self.endpoint = opts[:endpoint]
+        puts @ews.uri
       end
 
       # Set the endpoint for Exchange Web Services.  
@@ -99,8 +114,7 @@ module Viewpoint
         @endpoint = endpoint
         return unless @endpoint
 
-        SOAP::ExchangeWebService.endpoint(:uri => endpoint,
-                                          :version => version)
+        @ews.endpoint = endpoint
       end
 
       # Set the SOAP username and password.
@@ -108,7 +122,8 @@ module Viewpoint
       # @param [String] pass The password
       def set_auth(user,pass)
         @user = user
-        SOAP::ExchangeWebService.set_auth(user, pass)
+        @password = pass
+        SOAP::ExchangeWebService.set_auth(@user, @password)
       end
 
       # Set the http driver that the SOAP back-end will use.
@@ -124,6 +139,12 @@ module Viewpoint
       #     'c-rehash'ed directory
       def set_trust_ca(ca_path)
         SOAP::ExchangeWebService.set_http_options(:trust_ca_file => ca_path)
+      end
+
+      def get_all_folders
+        puts @ews
+        puts @ews.uri
+        @ews.all_folders
       end
 
       # The MailboxUser object that represents the user connected to EWS.

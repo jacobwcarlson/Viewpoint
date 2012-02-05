@@ -11,8 +11,7 @@ describe "Test the basic features of Viewpoint" do
   before(:all) do
     creds = JSON.load(File.open("#{File.dirname(__FILE__)}/creds.json",'r'))
     @ews = Viewpoint::EWS::SOAP::ExchangeWebService.new
-    @ews.endpoint = creds['endpoint']
-    @ews.set_auth(creds['user'],creds['pass'])
+    @ews.set_auth(creds['user'], creds['pass'])
   end
 
   it 'should retrieve the various Folder Types' do
