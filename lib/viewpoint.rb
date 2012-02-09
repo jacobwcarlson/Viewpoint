@@ -101,7 +101,6 @@ module Viewpoint
       def initialize(opts = {})
         @ews = SOAP::ExchangeWebService.new
         set_auth(opts[:user], opts[:password])
-        puts @ews.uri
       end
 
       # Set the endpoint for Exchange Web Services.  
@@ -142,8 +141,6 @@ module Viewpoint
       end
 
       def get_all_folders
-        puts @ews
-        puts @ews.uri
         @ews.all_folders
       end
 

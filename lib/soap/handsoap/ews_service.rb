@@ -43,6 +43,8 @@ module Viewpoint
         end
 
         def set_auth(user, pass, endpoint = nil)
+          raise ArgumentError, "Missing username" unless user
+
           @user = user
           @pass = pass
           @uri = endpoint
@@ -326,23 +328,6 @@ module Viewpoint
 
           find_folder([root], traversal, {:base_shape => shape}, restr).first
         end
-
-=begin
-  XXX:  jwc 09.13.2011
-        This doesn't appear to do anything (build_convert_id! isn't
-        defined anywhere).
-
-        def convert_id
-          action = "#{SOAP_ACTION_PREFIX}/ConvertId"
-
-          resp = invoke("#{NS_EWS_MESSAGES}:ConvertId", action) do |convert_id|
-            build_convert_id!(convert_id)
-          end
-
-          puts resp.inspect
-          parse_convert_id(resp)
-        end
-=end
 
         # XXX: jwc 09.13.2011
         #      Not covered in unit tests and will likely be removed, as this

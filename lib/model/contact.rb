@@ -1,19 +1,19 @@
 =begin
-  This file is part of Viewpoint; the Ruby library for Microsoft Exchange Web Services.
+This file is part of Viewpoint; the Ruby library for Microsoft Exchange Web Services.
 
-  Copyright © 2011 Dan Wanek <dan.wanek@gmail.com>
+Copyright © 2011 Dan Wanek <dan.wanek@gmail.com>
 
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 =end
 
 module Viewpoint
@@ -23,28 +23,28 @@ module Viewpoint
 
       # This is a class method that creates a new Contact in the Exchange Data Store.
       # @param [Hash] item A Hash of values based on values found here:
-      #   http://msdn.microsoft.com/en-us/library/aa581315.aspx
+      # http://msdn.microsoft.com/en-us/library/aa581315.aspx
       # @param [String, Symbol] folder_id The folder to create this item in. Either a
-      #   DistinguishedFolderId (must me a Symbol) or a FolderId (String)
+      # DistinguishedFolderId (must me a Symbol) or a FolderId (String)
       # @param [String] send_invites "SendToNone/SendOnlyToAll/SendToAllAndSaveCopy"
-      #   See:  http://msdn.microsoft.com/en-us/library/aa565209.aspx
+      # See: http://msdn.microsoft.com/en-us/library/aa565209.aspx
       # @example Typical Usage
-      #   item = {
-      #     :file_as => {:text => 'Dan Wanek'},
-      #     :given_name => {:text => 'Dan Wanek'},
-      #     :company_name => {:text => 'Test Company'},
-      #     :email_addresses => [
-      #       {:entry => {:key => 'EmailAddress1', :text => 'myemail@work.com'}},
-      #       {:entry => {:key => 'EmailAddress2', :text => 'myemail@home.com'}}
-      #     ],
-      #     :physical_addresses => [
-      #       {:entry => {:key => 'Business', :sub_elements => {:street => {:text => '6343 N Baltimore'}, :city => {:text => 'Bismarck'}, :state => {:text => 'ND'} }}}
-      #     ],
-      #     :phone_numbers => [
-      #       {:entry => {:key => 'BusinessPhone', :text => '7012220000'}}
-      #     ],
-      #     :job_title => {:text => 'Systems Architect'}
-      #   }
+      # item = {
+      # :file_as => {:text => 'Dan Wanek'},
+      # :given_name => {:text => 'Dan Wanek'},
+      # :company_name => {:text => 'Test Company'},
+      # :email_addresses => [
+      # {:entry => {:key => 'EmailAddress1', :text => 'myemail@work.com'}},
+      # {:entry => {:key => 'EmailAddress2', :text => 'myemail@home.com'}}
+      # ],
+      # :physical_addresses => [
+      # {:entry => {:key => 'Business', :sub_elements => {:street => {:text => '6343 N Baltimore'}, :city => {:text => 'Bismarck'}, :state => {:text => 'ND'} }}}
+      # ],
+      # :phone_numbers => [
+      # {:entry => {:key => 'BusinessPhone', :text => '7012220000'}}
+      # ],
+      # :job_title => {:text => 'Systems Architect'}
+      # }
       # @example Minimal Usage
       def self.create_item_from_hash(item, folder_id = :contacts)
         conn = Viewpoint::EWS::EWS.instance
@@ -82,22 +82,22 @@ module Viewpoint
         type = self.class.name.split(/::/).last.ruby_case.to_sym
         k = :email_addresses
         v = 'EmailAddress1'
-        changes << {:set_item_field => 
+        changes << {:set_item_field =>
           [{:indexed_field_uRI => {:field_uRI => FIELD_URIS[k][:text], :field_index => v}}, {type=>{k => {:entry => {:key => v, :text => email1}}}}]} unless email1.nil?
         v = 'EmailAddress2'
-        changes << {:set_item_field => 
+        changes << {:set_item_field =>
           [{:indexed_field_uRI => {:field_uRI => FIELD_URIS[k][:text], :field_index => v}}, {type=>{k => {:entry => {:key => v, :text => email2}}}}]} unless email2.nil?
         v = 'EmailAddress3'
-        changes << {:set_item_field => 
+        changes << {:set_item_field =>
           [{:indexed_field_uRI => {:field_uRI => FIELD_URIS[k][:text], :field_index => v}}, {type=>{k => {:entry => {:key => v, :text => email3}}}}]} unless email3.nil?
         @updates.merge!({:preformatted => changes}) {|k,v1,v2| v1 + v2}
       end
 
       # Set the phone number. You must give a type based on the available Exchange phone number types
       # @param [Symbol] type the type of number to set. It must be one of these:
-      #   :assistant_phone, :business_fax, :business_phone, :business_phone2, :callback, :car_phone, :company_main_phone,
-      #   :home_fax, :home_phone, :home_phone2, :isdn, :mobile_phone, :other_fax, :other_telephone, :pager, :primary_phone,
-      #   :radio_phone, :telex, :tty_tdd_phone
+      # :assistant_phone, :business_fax, :business_phone, :business_phone2, :callback, :car_phone, :company_main_phone,
+      # :home_fax, :home_phone, :home_phone2, :isdn, :mobile_phone, :other_fax, :other_telephone, :pager, :primary_phone,
+      # :radio_phone, :telex, :tty_tdd_phone
       # @param [String] phone_number The phone number
       def set_phone_number(phone_type, phone_number)
         valid_types = [:assistant_phone, :business_fax, :business_phone, :business_phone2, :callback, :car_phone, :company_main_phone,
@@ -116,9 +116,9 @@ module Viewpoint
 
       # Set an address for this contact
       # @param [Symbol] address_type the type of Exchange address to set. It must be one of the following:
-      #   :business, :home, :other
+      # :business, :home, :other
       # @param [Hash] address the address elements to set. It may include the following keys
-      #   :street, :city, :state, :country_or_region, :postal_code
+      # :street, :city, :state, :country_or_region, :postal_code
       # @TODO check for empty address hash
       def set_address(address_type, address)
         valid_types = [:business, :home, :other]
@@ -172,10 +172,10 @@ module Viewpoint
               eval "@#{itype}[entry[:key].ruby_case.to_sym] = (entry.has_key?(:text) ? entry[:text] : '')"
             end
             self.instance_eval <<-EOF
-          def #{itype}
-            self.instance_variable_get "@#{itype}"
-          end
-          EOF
+def #{itype}
+self.instance_variable_get "@#{itype}"
+end
+EOF
           else
             @ews_methods_undef << itype
           end
@@ -197,10 +197,10 @@ module Viewpoint
             @phone_numbers[entry[:key].ruby_case.to_sym] = (entry.has_key?(:text) ? entry[:text] : "")
           end
           self.instance_eval <<-EOF
-          def #{phone_numbers}
-            @phone_numbers
-          end
-          EOF
+def #{phone_numbers}
+@phone_numbers
+end
+EOF
           @ews_methods << phone_numbers
         else
           @ews_methods_undef << itype
@@ -224,10 +224,10 @@ module Viewpoint
             end
           end
           self.instance_eval <<-EOF
-          def #{physical_addresses}
-            @physical_addresses
-          end
-          EOF
+def #{physical_addresses}
+@physical_addresses
+end
+EOF
         else
           @ews_methods_undef << itype
         end

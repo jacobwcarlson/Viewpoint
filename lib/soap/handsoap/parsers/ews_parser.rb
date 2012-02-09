@@ -1,19 +1,19 @@
 =begin
-  This file is part of Viewpoint; the Ruby library for Microsoft Exchange Web Services.
+This file is part of Viewpoint; the Ruby library for Microsoft Exchange Web Services.
 
-  Copyright © 2011 Dan Wanek <dan.wanek@gmail.com>
+Copyright © 2011 Dan Wanek <dan.wanek@gmail.com>
 
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 =end
 
 module Viewpoint
@@ -131,7 +131,7 @@ module Viewpoint
           end
         end
 
-        # @todo need to find out out to us XPath to get ItemId.  It doesn't seem to work now.
+        # @todo need to find out out to us XPath to get ItemId. It doesn't seem to work now.
         def create_item_response(opts)
           if(@response_message.status == 'Success')
             items = []
@@ -218,7 +218,7 @@ module Viewpoint
         def resolution_set
           resolution_set = []
           (@response/"//#{NS_EWS_MESSAGES}:ResolutionSet/*").each do |r|
-            mbox_hash    = mailbox((r/"#{NS_EWS_TYPES}:Mailbox").first)
+            mbox_hash = mailbox((r/"#{NS_EWS_TYPES}:Mailbox").first)
             contact_hash = contact((r/"#{NS_EWS_TYPES}:Contact").first)
             resolution_set << mbox_hash.merge(contact_hash)
           end
