@@ -99,8 +99,7 @@ module Viewpoint
       attr_reader :ews, :user, :password
 
       def initialize(opts = {})
-        @ews = SOAP::ExchangeWebService.new
-        set_auth(opts[:user], opts[:password])
+        @ews = SOAP::ExchangeWebService.new(opts)
       end
 
       # Set the endpoint for Exchange Web Services.  
@@ -110,9 +109,6 @@ module Viewpoint
       # @param [Integer] version The SOAP version to use.  This defaults to 1
       #   and you should not need to pass this parameter.
       def endpoint=(endpoint, version = 1)
-        @endpoint = endpoint
-        return unless @endpoint
-
         @ews.endpoint = endpoint
       end
 
@@ -120,9 +116,7 @@ module Viewpoint
       # @param [String] user The user name
       # @param [String] pass The password
       def set_auth(user,pass)
-        @user = user
-        @password = pass
-        SOAP::ExchangeWebService.set_auth(@user, @password)
+        @ews.set_auth(user, pass)
       end
 
       # Set the http driver that the SOAP back-end will use.
@@ -140,16 +134,68 @@ module Viewpoint
         SOAP::ExchangeWebService.set_http_options(:trust_ca_file => ca_path)
       end
 
-      def get_all_folders
-        @ews.all_folders
+      #
+      # Utility method to return all folders that contain email. By default
+      # it won't return the following:
+      #     "Junk Email"
+      #     "Deleted Items"
+      #     "Conversation Action Settings"
+      # To include those folders in the returned array specify any of the
+      # following options:
+      #     :return_junk_email => true
+      #     :return_deleted_items => true
+      #     :return_conversation_action_settings => true
+      # To specifically exclude a list of folders specify:
+      #     :ignore_folders [array of folders to exclude]
+      def get_all_email_folders(opts = {})
+        ignore_folders = opts[:ignore_folders] || []
+        ignore_folders.push "conversation action setttings" unless
+          opts[:conversation_action_settings]
+        ignore_folders.push "deleted items" unless
+          opts[:deleted_items]
+        ignore_folders.push "junk email" unless
+          opts[:junk_email]
+
+        email_folders = []
+        @ews.all_folders.each do |f|
+          next unless f.class == Viewpoint::EWS::Folder
+          next if ignore_folders.include? f.display_name.downcase
+
+          email_folders.push f
+        end
+
+        email_folders
+      end
+      
+      #
+      # Utility method to return all folders that contain contacts. By default
+      # To specifically exclude a list of folders specify:
+      #     :ignore_folders [array of folders to exclude]
+      def get_all_contacts_folders(opts = {})
+        ignore_folders = opts[:ignore_folders] || []
+
+        contacts_folders = []
+        @ews.all_folders.each do |f|
+          next unless f.class == Viewpoint::EWS::ContactsFolder
+          next if ignore_folders.include? f.display_name.downcase
+
+          contacts_folders.push f
+        end
+
+        contacts_folders
       end
 
-      # The MailboxUser object that represents the user connected to EWS.
-      #
-      # jwc 09.12.2011: Commenting this out for the moment....
-      #def me
-        #MailboxUser.find_user((@user.include?('@') ? @user : "#{@user}@"))
-      #end
+      def get_folder(folder_ids)
+        @ews.get_folder(folder_ids)
+      end
+
+      def get_contacts
+        @ews.get_folder(:contacts).each{ |f| f.find_items }
+      end
+
+      def get_item(item_id, item_shape = nil)
+        @ews.get_item([item_id].flatten, item_shape)
+      end
     end # class EWS
-  end # EWS
+  end # module EWS
 end

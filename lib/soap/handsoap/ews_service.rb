@@ -38,7 +38,7 @@ module Viewpoint
         @http_options = nil
 
         def initialize(args = {})
-          @version = args[:user] || 1
+          @version = args[:version] || 1
           set_auth(args[:user], args[:password]) if args[:user]
         end
 
@@ -214,43 +214,34 @@ module Viewpoint
         # Identifies items that are located in a specified folder
         # @see http://msdn.microsoft.com/en-us/library/aa566107.aspx
         #
-        # @param [Array] parent_folder_ids An Array of folder ids, either a
-        #   DistinguishedFolderId (must me a Symbol) or a FolderId (String)
-        # @param [String] traversal Shallow/Deep/SoftDeleted
-        # @param [Hash] item_shape defines the FolderShape node
+        # @param [Array] parent_folder_ids
+        #   An Array of folder ids, either a DistinguishedFolderId (must be
+        #   a Symbol) or a FolderId (String)
+        # @param [Hash] opts
+        #   Optional parameters to this method. See the "Child Elements"
+        #   section at http://msdn.microsoft.com/en-us/library/aa566370.aspx
+        # @param [String] traversal
+        #   Shallow/Deep/SoftDeleted
+        # @param [Hash] item_shape
+        #   Defines the FolderShape node
         #   See: http://msdn.microsoft.com/en-us/library/aa494311.aspx
-        # @option item_shape [String] :base_shape IdOnly/Default/AllProperties
-        # @option item_shape :additional_properties
-        #   See: http://msdn.microsoft.com/en-us/library/aa563810.aspx
-        # @param [Hash] opts optional parameters to this method
-        # @option opts [Hash] :calendar_view Limit FindItem by a start and
-        #   end date {:calendar_view => {:max_entries_returned => 2,
-        #       :start => <DateTime Obj>, :end => <DateTime Obj>}}
         def find_item(parent_folder_ids, traversal = 'Shallow',
                       item_shape = {:base_shape => 'Default'}, opts = {})
           action = "#{SOAP_ACTION_PREFIX}/FindItem"
-
           resp = invoke("#{NS_EWS_MESSAGES}:FindItem", action) do |root|
             build!(root) do
               root.set_attr('Traversal', traversal)
               item_shape!(root, item_shape)
-              query_strings = opts.delete(:query_string)
-              restriction = opts.delete(:restriction)
+              query_strings = opts[:query_string]
+              restriction = opts[:restriction]
 
-              # XXX: jwc 09.13.2011
-              #      Does this code do anything?
-              if(opts.has_key?(:calendar_view))
-                cal_view = opts[:calendar_view]
-                cal_view.each_pair { |k,v| cal_view[k] = v.to_s }
-              end
-
-              add_hierarchy!(root, opts, NS_EWS_MESSAGES)
-              #query_strings!(query_strings)
+              #add_hierarchy!(root, opts, NS_EWS_MESSAGES)
               root.add("#{NS_EWS_MESSAGES}:Restriction") do |r|
                 add_hierarchy!(r, restriction)
               end unless restriction.nil?
 
               parent_folder_ids!(root, parent_folder_ids)
+              query_strings!(query_strings) if query_strings
             end
           end
 

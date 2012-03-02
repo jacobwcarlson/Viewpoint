@@ -76,6 +76,17 @@ module Viewpoint
         @shallow = true
       end
 
+      def type
+        self.class.to_s.split("::").last
+      end
+
+      def more_items_available?
+        !@synced
+      end
+
+      def synced?
+        @synced
+      end
       # Get a specific folder by its ID.
       #
       # @param [String,Symbol] folder_id either a DistinguishedFolderID or
@@ -294,7 +305,7 @@ module Viewpoint
 
       # Find Items
       def find_items(opts = {})
-        item_shape = opts[:item_shap] || {:base_shape => 'Default'}
+        item_shape = opts[:item_shape] || {:base_shape => 'Default'}
         item_shape[:additional_properties] ||= {
           :field_uRL => ['item:ParentFolderId']
         }
@@ -304,8 +315,10 @@ module Viewpoint
           raise EwsError, "Could not find items. #{resp.code}: #{resp.message}"
         end
 
+        parms = resp.items.shift
+        @more_items_available = parms[:includes_last_item_in_range]
         items = []
-        resp.items.drop(1).each do |item|
+        resp.items.each do |item|
           item_type = item.keys.first
           items.push build_item(item)
         end
@@ -450,21 +463,52 @@ module Viewpoint
 
       # Syncronize Items in this folder. If this method is issued multiple
       # times it will continue where the last sync completed.
-      # @param [Integer] sync_amount The number of items to synchronize per sync
-      # @param [Boolean] sync_all Whether to sync all the data by looping through.
-      #   The default is to just sync the first set.  You can manually loop through
-      #   with multiple calls to #sync_items!
-      # @return [Hash] Returns a hash with keys for each change type that ocurred.
-      #   Possible key values are (:create/:udpate/:delete).  For create and update
-      #   changes the values are Arrays of Item or a subclass of Item.  For deletes
-      #   an array of ItemIds are returned wich is a Hash in the form:
-      #   {:id=>"item id", :change_key=>"change key"}
+      #
+      # @param [Integer]
+      #     sync_amount The number of items to synchronize per sync
+      #
+      # @param [Boolean] sync_all
+      #   Whether to sync all the data by looping through. The default is to
+      #   just sync the first set. You can manually loop through with
+      #   multiple calls.
+      #
+      # @param [String] sync_state = nil
+      #   Sync state to start from. If nil (the default) we sync from the
+      #   beginning of time. Upon successful return it will contain the
+      #   new sync state that can be used in subsequent calls to this method
+      #   to continue syncing.
+      #
+      # @param [Hash] opts = {}
+      #   Supported keys:
+      #     :sync_state
+      #         The sync state from which we should start the sync. Upon
+      #         return it will be updated with the new sync state.
+      #
+      # @return [Hash]
+      #   Returns a hash with keys for each change type that ocurred. Possible
+      #   key values are (:create/:update/:delete). For create and update
+      #   changes the values are Arrays of Item or a subclass of Item. For
+      #   deletes an array of ItemIds are returned which is a Hash in the
+      #   form:
+      #     {:id=>"item id", :change_key=>"change key"}
       #   See: http://msdn.microsoft.com/en-us/library/aa565609.aspx
       def sync_items!(sync_amount = 256, sync_all = false, opts = {})
-        item_shape = opts.has_key?(:item_shape) ? opts.delete(:item_shape) : {:base_shape => 'Default'}
-        resp = (Viewpoint::EWS::EWS.instance).ews.sync_folder_items(@folder_id, @sync_state, sync_amount, item_shape)
+        #item_shape = opts[:item_shape] || {:base_shape => 'Default'}
+        item_shape = {:base_shape => 'AllProperties'}
+        n_errors = 0
+        begin
+          resp = @ews.sync_folder_items(@folder_id, opts[:sync_state],
+                                        sync_amount, item_shape)
+        rescue EwsError => e
+          puts e.inspect
+          raise if exception !~ /^ErrorInternalServerTransientError/
+          raise if n_errors > 5
+          puts "Retrying sync"
+          n_errors += 1
+          retry
+        end
         parms = resp.items.shift
-        @sync_state = parms[:sync_state]
+        opts[:sync_state] = parms[:sync_state]
         @synced = parms[:includes_last_item_in_range]
         items = {}
         resp.items.each do |i|
@@ -477,17 +521,21 @@ module Viewpoint
             items[key] << (eval "#{i_type.to_s.camel_case}.new(i[key][i_type])")
           end
         end
+
         items
       end
 
-      # This is basically a work-around for Microsoft's BPOS hosted Exchange, which does not support
-      # subscriptions at the time of this writing.  This is the best way I could think of to get
-      # items from a specific period of time and track changes.
-      # !! Before using this method I would suggest trying a GenericFolder#items_since then using
-      # a subscription to track changes.
-      # This method should be followed by subsequent calls to GenericFolder#sync_items! to fetch
-      # additional items.  Calling this method again will clear the sync_state and synchronize
-      # everything again.
+      # This is basically a work-around for Microsoft's BPOS hosted Exchange,
+      # which does not support subscriptions at the time of this writing.
+      # This is the best way I could think of to get items from a specific
+      # period of time and track changes.
+      # !! Before using this method I would suggest trying a
+      # GenericFolder#items_since then using a subscription to track changes.
+      # This method should be followed by subsequent calls to
+      # GenericFolder#sync_items! to fetch additional items.  Calling this
+      # method again will clear the sync_state and synchronize everything
+      # again.
+      #
       # @return [Array<Item>] returns an array of Items
       def sync_items_since!(datetime, opts={})
         clear_sync_state!
@@ -499,7 +547,8 @@ module Viewpoint
         items_since(datetime, opts)
       end
 
-      # Clears out the @sync_state so you can freshly synchronize this folder if needed
+      # Clears out the @sync_state so you can freshly synchronize this folder
+      # if needed
       def clear_sync_state!
         @sync_state = nil
       end
@@ -515,26 +564,28 @@ module Viewpoint
       end
 
       # Deletes this folder from the Exchange Data Store
-      # @param [Boolean] recycle_bin Send to the recycle bin instead of deleting (default: false)
+      # @param [Boolean] recycle_bin Send to the recycle bin instead of
+      #   deleting (default: false)
       # @return [TrueClass] This will return true because if an issue occurs it
       #   will be thrown in the SOAP Parser
       def delete!(recycle_bin = false)
         deltype = recycle_bin ? 'MoveToDeletedItems' : 'HardDelete'
-        resp = (Viewpoint::EWS::EWS.instance).ews.delete_folder(@folder_id, deltype)
+        resp = (Viewpoint::EWS::EWS.instance).ews.delete_folder(@folder_id,
+          deltype)
+
         true
       end
 
       private
-
-      # Return the appropriate id based on whether it is a DistinguishedFolderId or
-      # simply just a FolderId
+      # Return the appropriate id based on whether it is a
+      # DistinguishedFolderId or simply just a FolderId
       def self.normalize_id(folder_id)
         tfolder_id = folder_id.to_s.downcase
-        # If the folder_id is a DistinguishedFolderId change it to a symbol so our SOAP
-        # method does the right thing.
+
+        # If the folder_id is a DistinguishedFolderId change it to a symbol
+        # so our SOAP method does the right thing.
         @@distinguished_folder_ids.find_index(tfolder_id) ? tfolder_id.to_sym : folder_id
       end
-
     end # GenericFolder
   end # EWS
 end # Viewpoint

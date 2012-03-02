@@ -177,7 +177,7 @@ module Viewpoint
 
       def deepen!
         return true unless @shallow
-        conn = Viewpoint::EWS::EWS.instance
+        conn = Viewpoint::EWS::EWS.ews
         shape = {:base_shape => 'AllProperties', :body_type => (@text_only ? 'Text' : 'Best')}
         resp = conn.ews.get_item([@item_id], shape) 
         resp = resp.items.shift

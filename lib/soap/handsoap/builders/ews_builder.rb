@@ -82,8 +82,8 @@ module Viewpoint
           end
         end
 
-        # This is forthcoming in Exchange 2010.  It will replace much of the Restriction
-        # based code.
+        # This is forthcoming in Exchange 2010.  It will replace much of the
+        # Restriction based code.
         # @param [Array] An array of query strings
         # @see http://msdn.microsoft.com/en-us/library/ee693615.aspx
         def query_strings!(query_strings)
