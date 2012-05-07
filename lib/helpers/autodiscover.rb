@@ -36,13 +36,6 @@ module Viewpoint
         end
       end
 
-      class InvalidCredentials < StandardError
-        def initialize(args = {})
-          @message = "Invalid credentials"
-        end
-      end
-
-
       # Find the EWS endpoint via Autodiscover
       def self.find_endpoint(email_address, password)
         raise ArgumentError, "Missing email address" unless email_address
@@ -107,7 +100,7 @@ module Viewpoint
         case response.status_code
         when 401
           raise InvalidCredentials
-        when response.status_code == 302
+        when 302
           raise Redirect.new(:url => response.header['Location'].first)
         end
 

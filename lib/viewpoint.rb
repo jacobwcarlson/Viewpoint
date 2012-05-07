@@ -73,6 +73,12 @@ require 'helpers/autodiscover.rb'
 # @attr_reader [SOAP::ExchangeWebService] :ews The SOAP object used to make
 #   calls to the Exchange Web Service.
 module Viewpoint
+  class InvalidCredentials < StandardError
+    def initialize(args = {})
+      @message = "Invalid credentials"
+    end
+  end
+
   module EWS
     class EwsBase
       def initialize(args = {})
