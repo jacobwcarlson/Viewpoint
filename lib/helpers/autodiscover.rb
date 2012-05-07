@@ -86,8 +86,13 @@ module Viewpoint
                 email_address, e.email_address
               $stderr.printf "But I don't know how to do that :(.\n"
               return nil
-            rescue
-              puts "Unknown exception: #{$!}"
+            # Make sure that we re-throw InvalidCredentials so that it may
+            # be handled further up the chain.
+            rescue InvalidCredentials => e
+              raise
+            rescue Exception => e
+              puts "Unknown exception: #{e.message}"
+              return nil
             end
             
             break
