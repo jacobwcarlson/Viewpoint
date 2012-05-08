@@ -90,9 +90,6 @@ module Viewpoint
             # be handled further up the chain.
             rescue InvalidCredentials => e
               raise
-            rescue Exception => e
-              puts "Unknown exception: #{e.message}"
-              return nil
             end
             
             break
@@ -106,6 +103,8 @@ module Viewpoint
       def self.parse_autodiscover_response(response)
         case response.status_code
         when 401
+        # Microsoft seems to have made this up, but not documented it
+        when 456
           raise InvalidCredentials
         when 302
           raise Redirect.new(:url => response.header['Location'].first)
