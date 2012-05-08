@@ -98,6 +98,8 @@ module Viewpoint
             break
           end
         end
+        
+        nil
       end
 
     private
