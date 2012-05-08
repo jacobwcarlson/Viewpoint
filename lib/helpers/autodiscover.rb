@@ -99,7 +99,7 @@ module Viewpoint
           end
         end
         
-        nil
+        raise EndpointNotFound
       end
 
     private

@@ -79,6 +79,12 @@ module Viewpoint
     end
   end
 
+  class EndpointNotFound < StandardError
+    def initialize(args = {})
+      @message = "Unable to find EWS endpoint"
+    end
+  end
+ 
   module EWS
     class EwsBase
       def initialize(args = {})
