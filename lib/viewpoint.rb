@@ -74,17 +74,29 @@ require 'helpers/autodiscover.rb'
 #   calls to the Exchange Web Service.
 module Viewpoint
   class InvalidCredentials < StandardError
-    def initialize(args = {})
+    def initialize()
       @message = "Invalid credentials"
     end
   end
 
+  class ExpiredCredentials < InvalidCredentials
+    def initialize()
+      @message = "Credentials have expired"
+    end
+  end
+
   class EndpointNotFound < StandardError
-    def initialize(args = {})
+    def initialize()
       @message = "Unable to find EWS endpoint"
     end
   end
  
+  class UnknownHttpError < StandardError
+    def initialize(status_code)
+      @message = "Unknown HTTP error (#{status_code})"
+    end
+  end
+
   module EWS
     class EwsBase
       def initialize(args = {})

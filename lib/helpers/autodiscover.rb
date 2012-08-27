@@ -69,11 +69,6 @@ module Viewpoint
             http.set_auth(url, email_address, password)
             begin
               response = http.post(url, request_body, opts)
-            rescue
-              break
-            end
-
-            begin
               return parse_autodiscover_response response
             rescue Redirect => e
               redirect_count += 1
@@ -90,8 +85,13 @@ module Viewpoint
             # be handled further up the chain.
             rescue InvalidCredentials => e
               raise
+            # This too
+            rescue UnknownHttpError => e
+              raise
+            rescue
+              break
             end
-            
+
             break
           end
         end
@@ -101,13 +101,20 @@ module Viewpoint
 
     private
       def self.parse_autodiscover_response(response)
-        case response.status_code
-        when 401
-        # Microsoft seems to have made this up, but not documented it
-        when 456
-          raise InvalidCredentials
-        when 302
-          raise Redirect.new(:url => response.header['Location'].first)
+        if response.status_code != 200
+          case response.status_code
+          when 401
+          # Microsoft seems to have made this up, but not documented it
+          when 456
+            raise InvalidCredentials
+          # This too
+          when 457
+            raise ExpiredCredentials
+          when 302
+            raise Redirect.new(:url => response.header['Location'].first)
+          else
+            raise UnknownHttpError(response.status_code)
+          end
         end
 
         doc = Nokogiri::XML(response.content)
